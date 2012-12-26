@@ -1,0 +1,42 @@
+<html>
+	<head>
+	</head>
+	<body>
+		<div id="main">
+		</div>
+
+		<script src = "js/jquery-1.8.3.min.js"></script>
+		<script src = "js/underscore-min.js"></script>
+		<script src = "js/backbone-min.js"></script>
+		<script>
+
+		$(function() { //On Document ready
+
+			//define a backbone view
+			var HomeView = Backbone.View.extend({
+				id: "hello-world-id",
+				tagName: "div",
+				className : "hello-world",
+				template : null,
+
+				events: {},
+				initialize: function() {
+					_.bindAll(this);
+					this.template = _.template('<div>Hello <strong>world!</string></div>');
+				},
+
+				render: function() {
+					this.$el.html( this.template() );
+					return this;
+				}
+			});
+			//End backbone
+
+			//Instantiate and render the view
+			var test = new HomeView();
+			$("#main").append(test.el);
+			test.render();
+		})
+		</script>
+	</body>
+</html>
