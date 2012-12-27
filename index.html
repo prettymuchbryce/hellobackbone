@@ -1,42 +1,135 @@
 <html>
 	<head>
+		<style>
+			.boxWrapper {
+				font-family: "helvetica";
+				width:100%;
+				display: block;
+				height:100%;
+				text-align: center;
+			}
+			.boxRed {
+				margin:4px;
+				background-color: #ff2222;
+				display: inline-block;
+				width:100px;
+				height:100px;
+			}
+			.boxBlack {
+				margin:4px;
+				background-color: #222222;
+				display: inline-block;
+				width:100px;
+				height:100px;
+			}
+		</style>
 	</head>
 	<body>
-		<div id="main">
+		<div class="boxWrapper">
+			Refresh to see changes persist to local storage.<br><small>For whatever crazy reason, Chrome doesn't support cookies for pages running off of the local file system.</small><br>
 		</div>
-
 		<script src = "js/jquery-1.8.3.min.js"></script>
+		<script src = "js/jquery.cookie.js"></script>
 		<script src = "js/underscore-min.js"></script>
 		<script src = "js/backbone-min.js"></script>
 		<script>
+		//On Document ready.
+		$(function() {
 
-		$(function() { //On Document ready
+			//Define a couple of consts.
+			COLOR_RED = "red"
+			COLOR_BLACK = "black"
 
-			//define a backbone view
-			var HomeView = Backbone.View.extend({
-				id: "hello-world-id",
-				tagName: "div",
-				className : "hello-world",
+			//Define the view.
+			var BoxView = Backbone.View.extend({
+				tagName: "span",
 				template : null,
+				elementClass: "",
+				redClass: "boxRed",
+				blackClass: "boxBlack",
 
-				events: {},
+				events: {
+					'click': 'swapColorsAndSync'
+				},
 				initialize: function() {
 					_.bindAll(this);
-					this.template = _.template('<div>Hello <strong>world!</string></div>');
+					this.listenTo(this.model, "change", this.render);
 				},
-
 				render: function() {
+					if (this.model.get("color")===COLOR_RED) {
+						this.elementClass = this.redClass;
+					} else {
+						this.elementClass = this.blackClass;
+					}
+					this.template = _.template('<span class = "' + this.elementClass + '"></span>');
 					this.$el.html( this.template() );
 					return this;
+				},
+				swapColorsAndSync:function() {
+					this.swapColors();
+					this.model.collection.sync();
+				},
+				swapColors:function() {
+					if (this.elementClass === this.redClass) {
+						this.elementClass = this.blackClass;
+						this.model.set("color",COLOR_BLACK);
+					} else {
+						this.elementClass = this.redClass;
+						this.model.set("color",COLOR_RED);
+					}					
 				}
 			});
-			//End backbone
 
-			//Instantiate and render the view
-			var test = new HomeView();
-			$("#main").append(test.el);
-			test.render();
-		})
+			//Define a model that represents a box.
+			var Box = Backbone.Model.extend({
+				defaults: {
+					color: COLOR_RED
+				}
+			})
+
+			//Define the collection of boxes as a whole.
+			//Here we also override Backbone's 'sync' method to save data as a cookie.
+			var Boxes = Backbone.Collection.extend({
+				model: BoxView,
+				initialize:function() {
+					if ($.cookie('boxes-experiment')===null) {
+						for (var i = 0; i < 200; i++) {
+							var box = new Box();
+							this.add(box);
+							var view = new BoxView({"model": box});
+							$(".boxWrapper").append(view.el);
+							view.render();
+						}
+					} else {
+						savedList = JSON.parse($.cookie('boxes-experiment'));
+						for (var i = 0; i < savedList.length; i++) {
+							var box = new Box();
+							this.add(box);
+							if (savedList[i]===1) {
+								box.set("color",COLOR_BLACK);
+							}
+							var view = new BoxView({"model": box});
+							$(".boxWrapper").append(view.el);
+							view.render();
+						}
+					}
+				},
+				sync:function() {
+					var savedList = [];
+					for (var i = 0; i < this.length; i++) {
+						if (this.at(i).get("color")===COLOR_BLACK) {
+							savedList.push(1);
+						} else {
+							savedList.push(0);
+						}
+					}
+					$.cookie('boxes-experiment',JSON.stringify(savedList));
+				}
+			});
+
+			//Simply initalize the collection.
+			var boxes = new Boxes();
+		});
 		</script>
 	</body>
 </html>
